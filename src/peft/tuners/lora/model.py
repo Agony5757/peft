@@ -68,7 +68,7 @@ class LoraModel(BaseTuner):
     """
     Creates Low Rank Adapter (LoRA) model from a pretrained transformers model.
 
-    The method is described in detail in https://huggingface.co/papers/2106.09685.
+    The method is described in detail in https://arxiv.org/abs/2106.09685.
 
     Args:
         model ([`torch.nn.Module`]): The model to be adapted.
@@ -176,7 +176,7 @@ class LoraModel(BaseTuner):
 
     def _create_and_replace(
         self,
-        lora_config,
+        lora_config : LoraConfig,
         adapter_name,
         target,
         target_name,
@@ -212,6 +212,15 @@ class LoraModel(BaseTuner):
             )(self.model)
         except AttributeError:
             pass
+        
+        kwargs['use_qpeft'] = lora_config.use_qpeft
+        if lora_config.use_qpeft:
+            # Set arch, default to ABC
+            kwargs['qpeft_arch'] = lora_config.qpeft_arch
+
+            # Set qpeft_n_qlayers, default to rank
+            nlayers = lora_config.qpeft_n_qlayers            
+            kwargs['qpeft_n_qlayers'] = nlayers if nlayers is not None else lora_config.r             
 
         quant_methods = ["gptq", "aqlm", "awq"]
         for quant_method in quant_methods:
@@ -395,7 +404,7 @@ class LoraModel(BaseTuner):
             if val != "none":
                 msg = (
                     f"Careful, disabling adapter layers with bias configured to be '{val}' does not produce the same "
-                    "output as the base model would without adaption."
+                    "output as the the base model would without adaption."
                 )
                 warnings.warn(msg)
         self._set_adapter_layers(enabled=False)
