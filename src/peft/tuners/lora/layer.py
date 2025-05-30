@@ -81,9 +81,19 @@ class LoraVariant:
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
-    adapter_layer_names: tuple[str, ...] = ("lora_A", "lora_B", "lora_embedding_A", "lora_embedding_B")
+    #adapter_layer_names: tuple[str, ...] = ("lora_A", "lora_B", "lora_embedding_A", "lora_embedding_B")
+           
+    adapter_layer_names = ("lora_A", "lora_B", "lora_embedding_A", "lora_embedding_B",
+                            "lora_qpeft_Q", 
+                            "lora_qpeft_MPO_A", "lora_qpeft_MPO_B", 
+                            "lora_qpeft_MLP_A", "lora_qpeft_MLP_B", 
+                            "lora_qpeft_CW", 
+                            "lora_qpeft_QW", 
+                            )
     # All names of other parameters that may contain adapter-related parameters
-    other_param_names: tuple[str, ...] = ("r", "lora_alpha", "scaling", "lora_dropout")
+    #other_param_names: tuple[str, ...] = ("r", "lora_alpha", "scaling", "lora_dropout")
+    other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout",
+                                      "qpeft_arch", "qpeft_n_qlayers")
 
     def __init__(self, base_layer: nn.Module, ephemeral_gpu_offload: bool = False, **kwargs) -> None:
         self.base_layer = base_layer
@@ -99,67 +109,67 @@ class LoraLayer(BaseTunerLayer):
             self.lora_A = nn.ModuleDict({})
             self.lora_B = nn.ModuleDict({})
         else:
-            self.lora_A = nn.ModuleDict({})
-            self.lora_B = nn.ModuleDict({})
-            LoraLayer.other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout",
-                                      "qpeft_arch", "qpeft_n_qlayers")
+            # self.lora_A = nn.ModuleDict({})
+            # self.lora_B = nn.ModuleDict({})
+            # LoraLayer.other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout",
+            #                           "qpeft_arch", "qpeft_n_qlayers")
             # Quantum architecture
             qpeft_arch = kwargs.get('qpeft_arch', 'ABC')
             self.qpeft_arch = qpeft_arch
             if qpeft_arch == 'ABC': # MPO + MLP + Quantum                
-                LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                                            "qpeft_Q", 
-                                            "qpeft_MPO_A", "qpeft_MPO_B", 
-                                            "qpeft_MLP_A", "qpeft_MLP_B", 
-                                            "qpeft_CW", 
-                                            "qpeft_QW", 
-                                            )
-                self.qpeft_Q = nn.ModuleDict({})
-                self.qpeft_MPO_A = nn.ModuleDict({})
-                self.qpeft_MPO_B = nn.ModuleDict({})
-                self.qpeft_MLP_A = nn.ModuleDict({})
-                self.qpeft_MLP_B = nn.ModuleDict({})
-                self.qpeft_CW = nn.ModuleDict({})
-                self.qpeft_QW = nn.ModuleDict({})                
+                # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
+                #                             "lora_qpeft_Q", 
+                #                             "lora_qpeft_MPO_A", "lora_qpeft_MPO_B", 
+                #                             "lora_qpeft_MLP_A", "lora_qpeft_MLP_B", 
+                #                             "lora_qpeft_CW", 
+                #                             "lora_qpeft_QW", 
+                #                             )
+                self.lora_qpeft_Q = nn.ModuleDict({})
+                self.lora_qpeft_MPO_A = nn.ModuleDict({})
+                self.lora_qpeft_MPO_B = nn.ModuleDict({})
+                self.lora_qpeft_MLP_A = nn.ModuleDict({})
+                self.lora_qpeft_MLP_B = nn.ModuleDict({})
+                self.lora_qpeft_CW = nn.ModuleDict({})
+                self.lora_qpeft_QW = nn.ModuleDict({})                
             elif qpeft_arch == 'AC': # MPO + Quantum
                 raise ValueError("AC (MPO + Quantum) is not a valid architecture")
             elif qpeft_arch == 'BC': # MLP + Quantum (Simple Quantum LoRA)                
-                LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                                            "qpeft_Q", 
-                                            "qpeft_MLP_A", "qpeft_MLP_B", 
-                                            "qpeft_CW", 
-                                            "qpeft_QW", 
-                                            )
-                self.qpeft_Q = nn.ModuleDict({})
-                self.qpeft_MLP_A = nn.ModuleDict({})
-                self.qpeft_MLP_B = nn.ModuleDict({})
-                self.qpeft_CW = nn.ModuleDict({})
-                self.qpeft_QW = nn.ModuleDict({})
+                # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
+                #                             "lora_qpeft_Q", 
+                #                             "lora_qpeft_MLP_A", "lora_qpeft_MLP_B", 
+                #                             "lora_qpeft_CW", 
+                #                             "lora_qpeft_QW", 
+                #                             )
+                self.lora_qpeft_Q = nn.ModuleDict({})
+                self.lora_qpeft_MLP_A = nn.ModuleDict({})
+                self.lora_qpeft_MLP_B = nn.ModuleDict({})
+                self.lora_qpeft_CW = nn.ModuleDict({})
+                self.lora_qpeft_QW = nn.ModuleDict({})
             elif qpeft_arch == 'AB': # MPO + MLP (MPO Scheme, no quantum)                    
-                LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                                            "qpeft_MPO_A", "qpeft_MPO_B", 
-                                            "qpeft_MLP_A", "qpeft_MLP_B", 
-                                            "qpeft_CW", 
-                                            )
-                self.qpeft_MPO_A = nn.ModuleDict({})
-                self.qpeft_MPO_B = nn.ModuleDict({})
-                self.qpeft_MLP_A = nn.ModuleDict({})
-                self.qpeft_MLP_B = nn.ModuleDict({})
-                self.qpeft_CW = nn.ModuleDict({})
+                # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
+                #                             "lora_qpeft_MPO_A", "lora_qpeft_MPO_B", 
+                #                             "lora_qpeft_MLP_A", "lora_qpeft_MLP_B", 
+                #                             "lora_qpeft_CW", 
+                #                             )
+                self.lora_qpeft_MPO_A = nn.ModuleDict({})
+                self.lora_qpeft_MPO_B = nn.ModuleDict({})
+                self.lora_qpeft_MLP_A = nn.ModuleDict({})
+                self.lora_qpeft_MLP_B = nn.ModuleDict({})
+                self.lora_qpeft_CW = nn.ModuleDict({})
             elif qpeft_arch == 'A': # MPO only               
-                LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                                            "qpeft_MPO_A", "qpeft_MPO_B", 
-                                            )
-                self.qpeft_MPO_A = nn.ModuleDict({})
-                self.qpeft_MPO_B = nn.ModuleDict({})
+                # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
+                #                             "lora_qpeft_MPO_A", "lora_qpeft_MPO_B", 
+                #                             )
+                self.lora_qpeft_MPO_A = nn.ModuleDict({})
+                self.lora_qpeft_MPO_B = nn.ModuleDict({})
             elif qpeft_arch == 'B': # MLP only (LoRA + Linear layer)    
                 # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                #                             "qpeft_MLP_A", "qpeft_MLP_B", 
-                #                             "qpeft_CW", 
+                #                             "lora_qpeft_MLP_A", "lora_qpeft_MLP_B", 
+                #                             "lora_qpeft_CW", 
                 #                             )
-                self.qpeft_MLP_A = nn.ModuleDict({})
-                self.qpeft_MLP_B = nn.ModuleDict({})
-                self.qpeft_CW = nn.ModuleDict({})
+                self.lora_qpeft_MLP_A = nn.ModuleDict({})
+                self.lora_qpeft_MLP_B = nn.ModuleDict({})
+                self.lora_qpeft_CW = nn.ModuleDict({})
             else:
                 raise ValueError(f"Invalid qpeft_arch {self.qpeft_arch}.")
 
@@ -278,61 +288,72 @@ class LoraLayer(BaseTunerLayer):
 
             mat_ranks = [1, 8, 8, 8, 1]
 
-            self.qpeft_MPO_A[adapter_name] = TTOLayer(inp_modes=self.a_inp_modes, 
+            self.lora_qpeft_MPO_A[adapter_name] = TTOLayer(inp_modes=self.a_inp_modes, 
                                         out_modes=self.a_out_modes, 
                                         mat_ranks=mat_ranks)
-            self.qpeft_MPO_B[adapter_name] = TTOLayer(inp_modes=self.b_inp_modes, 
+            self.lora_qpeft_MPO_B[adapter_name] = TTOLayer(inp_modes=self.b_inp_modes, 
                                         out_modes=self.b_out_modes, 
                                         mat_ranks = mat_ranks)
             
-            self.qpeft_MPO_A[adapter_name].requires_grad_(True)
-            self.qpeft_MPO_B[adapter_name].requires_grad_(True)
+            self.lora_qpeft_MPO_A[adapter_name].requires_grad_(True)
+            self.lora_qpeft_MPO_B[adapter_name].requires_grad_(True)
             
-            for name, module in self.qpeft_MPO_B[adapter_name].named_parameters():
+            for name, module in self.lora_qpeft_MPO_B[adapter_name].named_parameters():
                 if "mat" in name:
-                    nn.init.zeros_(self.qpeft_MPO_B[adapter_name].mat_cores[-1])
+                    nn.init.zeros_(self.lora_qpeft_MPO_B[adapter_name].mat_cores[-1])
 
         if 'B' in self.qpeft_arch:
             if 'A' in self.qpeft_arch:
                 # AB case:
-                self.qpeft_MLP_A[adapter_name] = nn.Linear(np.prod(self.a_out_modes), r, bias=False)
-                self.qpeft_MLP_B[adapter_name] = nn.Linear(r, np.prod(self.b_inp_modes), bias=False)
+                self.lora_qpeft_MLP_A[adapter_name] = nn.Linear(np.prod(self.a_out_modes), r, bias=False)
+                self.lora_qpeft_MLP_B[adapter_name] = nn.Linear(r, np.prod(self.b_inp_modes), bias=False)
                 # also there is a CW layer
-                self.qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
+                self.lora_qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
 
-                self.qpeft_MLP_A[adapter_name].requires_grad_(True)
-                self.qpeft_MLP_B[adapter_name].requires_grad_(True)
-                self.qpeft_CW[adapter_name].requires_grad_(True)
+                self.lora_qpeft_MLP_A[adapter_name].requires_grad_(True)
+                self.lora_qpeft_MLP_B[adapter_name].requires_grad_(True)
+                self.lora_qpeft_CW[adapter_name].requires_grad_(True)
 
                 # MLP_A, MLP_B and CW layers are kaiming_initialized
-                nn.init.kaiming_uniform_(self.qpeft_MLP_A[adapter_name].weight)
-                nn.init.kaiming_uniform_(self.qpeft_MLP_B[adapter_name].weight)
-                nn.init.kaiming_uniform_(self.qpeft_CW[adapter_name].weight)
+                nn.init.kaiming_uniform_(self.lora_qpeft_MLP_A[adapter_name].weight)
+                nn.init.kaiming_uniform_(self.lora_qpeft_MLP_B[adapter_name].weight)
+                nn.init.kaiming_uniform_(self.lora_qpeft_CW[adapter_name].weight)
             else:
                 # B or BC
-                self.qpeft_MLP_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
-                self.qpeft_MLP_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
-                self.qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
+                self.lora_qpeft_MLP_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+                self.lora_qpeft_MLP_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+                # self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+                # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+                self.lora_qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
 
-                self.qpeft_MLP_A[adapter_name].requires_grad_(True)
-                self.qpeft_MLP_B[adapter_name].requires_grad_(True)
-                self.qpeft_CW[adapter_name].requires_grad_(True)
+                nn.init.kaiming_uniform_(self.lora_qpeft_MLP_A[adapter_name].weight)
+                nn.init.zeros_(self.lora_qpeft_MLP_B[adapter_name].weight)
 
-                nn.init.kaiming_uniform_(self.qpeft_MLP_A[adapter_name].weight)
-                nn.init.zeros_(self.qpeft_MLP_B[adapter_name].weight)
-                nn.init.kaiming_uniform_(self.qpeft_CW[adapter_name].weight)
+                # nn.init.kaiming_uniform_(self.lora_A[adapter_name].weight)
+                # nn.init.zeros_(self.lora_B[adapter_name].weight)
+                nn.init.kaiming_uniform_(self.lora_qpeft_CW[adapter_name].weight)
+                                
+                # self.lora_qpeft_MLP_A[adapter_name].requires_grad_(True)
+                # self.lora_qpeft_MLP_B[adapter_name].requires_grad_(True)
+                # self.lora_qpeft_CW[adapter_name].requires_grad_(True)
+                # for name, param in self.lora_qpeft_MLP_A[adapter_name].named_parameters():
+                #     print(param.requires_grad)
+                # for name, param in self.lora_qpeft_MLP_B[adapter_name].named_parameters():
+                #     print(param.requires_grad)
+                # for name, param in self.lora_qpeft_CW[adapter_name].named_parameters():
+                #     print(param.requires_grad)
 
         if 'C' in self.qpeft_arch:
             # means quantum layer is in QPeft
             from .qpeft_vqc import QLP
-            self.qpeft_Q[adapter_name] = QLP(n_qubits=r, n_qlayers=self.n_qlayers)
+            self.lora_qpeft_Q[adapter_name] = QLP(n_qubits=r, n_qlayers=self.n_qlayers)
             
-            self.qpeft_Q[adapter_name].requires_grad_(True)
+            self.lora_qpeft_Q[adapter_name].requires_grad_(True)
             # also there is a linear layer after QLP
-            self.qpeft_QW[adapter_name] = nn.Linear(r, r, bias=False)
+            self.lora_qpeft_QW[adapter_name] = nn.Linear(r, r, bias=False)
             
-            self.qpeft_QW[adapter_name].requires_grad_(True)
-            nn.init.kaiming_uniform_(self.qpeft_QW[adapter_name].weight)
+            self.lora_qpeft_QW[adapter_name].requires_grad_(True)
+            nn.init.kaiming_uniform_(self.lora_qpeft_QW[adapter_name].weight)
 
 
     def update_layer(
@@ -374,9 +395,9 @@ class LoraLayer(BaseTunerLayer):
             self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=lora_bias)
             self.lora_bias[adapter_name] = lora_bias
         else:
-            self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
-            self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=lora_bias)
-            self.lora_bias[adapter_name] = lora_bias
+            # self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+            # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=lora_bias)
+            # self.lora_bias[adapter_name] = lora_bias
             self._update_layer_qpeft(adapter_name=adapter_name, r=r)
 
         if use_rslora:
@@ -410,7 +431,17 @@ class LoraLayer(BaseTunerLayer):
             if adapter_name in self.lora_variant:
                 self.lora_variant[adapter_name].init(self, **kwargs)
 
+
         self.set_adapter(self.active_adapters)
+
+        
+        # for name, param in self.lora_qpeft_MLP_A[adapter_name].named_parameters():
+        #     print(param.requires_grad)
+        # for name, param in self.lora_qpeft_MLP_B[adapter_name].named_parameters():
+        #     print(param.requires_grad)
+        # for name, param in self.lora_qpeft_CW[adapter_name].named_parameters():
+        #     print(param.requires_grad)
+
 
     def reset_lora_parameters(self, adapter_name, init_lora_weights):
         if init_lora_weights is False:
@@ -936,13 +967,13 @@ class Linear(nn.Module, LoraLayer):
                 else: 
                     # use QPeFT
                     if self.qpeft_arch == 'ABC':
-                        lora_Q = self.qpeft_Q[active_adapter]
-                        lora_QA = self.qpeft_MPO_A[active_adapter]
-                        lora_QB = self.qpeft_MPO_B[active_adapter]
-                        lora_CA = self.qpeft_MLP_A[active_adapter]
-                        lora_CB = self.qpeft_MLP_B[active_adapter]
-                        lora_CW = self.qpeft_CW[active_adapter]
-                        lora_QW = self.qpeft_QW[active_adapter]
+                        lora_Q = self.lora_qpeft_Q[active_adapter]
+                        lora_QA = self.lora_qpeft_MPO_A[active_adapter]
+                        lora_QB = self.lora_qpeft_MPO_B[active_adapter]
+                        lora_CA = self.lora_qpeft_MLP_A[active_adapter]
+                        lora_CB = self.lora_qpeft_MLP_B[active_adapter]
+                        lora_CW = self.lora_qpeft_CW[active_adapter]
+                        lora_QW = self.lora_qpeft_QW[active_adapter]
 
                         lora_qa_output = lora_QA(dropout(x))
                         lora_ca_output = lora_CA(lora_qa_output)
@@ -961,11 +992,11 @@ class Linear(nn.Module, LoraLayer):
                         # input()
                         result = result + lora_final
                     elif self.qpeft_arch == 'AB':
-                        lora_QA = self.qpeft_MPO_A[active_adapter]
-                        lora_QB = self.qpeft_MPO_B[active_adapter]
-                        lora_CA = self.qpeft_MLP_A[active_adapter]
-                        lora_CB = self.qpeft_MLP_B[active_adapter]
-                        lora_CW = self.qpeft_CW[active_adapter]
+                        lora_QA = self.lora_qpeft_MPO_A[active_adapter]
+                        lora_QB = self.lora_qpeft_MPO_B[active_adapter]
+                        lora_CA = self.lora_qpeft_MLP_A[active_adapter]
+                        lora_CB = self.lora_qpeft_MLP_B[active_adapter]
+                        lora_CW = self.lora_qpeft_CW[active_adapter]
 
                         lora_qa_output = lora_QA(dropout(x))
                         lora_ca_output = lora_CA(lora_qa_output)
@@ -973,30 +1004,33 @@ class Linear(nn.Module, LoraLayer):
                         lora_qb_in = lora_CB(lora_ca_output)
                         result = result + lora_QB(lora_qb_in) * scaling
                     elif self.qpeft_arch == 'BC':                        
-                        lora_Q = self.qpeft_Q[active_adapter]
-                        lora_CA = self.qpeft_MLP_A[active_adapter]
-                        lora_CB = self.qpeft_MLP_B[active_adapter]
-                        lora_CW = self.qpeft_CW[active_adapter]
-                        lora_QW = self.qpeft_QW[active_adapter]
+                        lora_Q = self.lora_qpeft_Q[active_adapter]
+                        lora_CA = self.lora_qpeft_MLP_A[active_adapter]
+                        lora_CB = self.lora_qpeft_MLP_B[active_adapter]
+                        lora_CW = self.lora_qpeft_CW[active_adapter]
+                        lora_QW = self.lora_qpeft_QW[active_adapter]
 
                         lora_ca_output = lora_CA(dropout(x))
                         quantum_out = lora_Q(lora_ca_output)
                         lora_cb_in = lora_QW(quantum_out.to(lora_QW.weight.dtype)) + lora_CW(lora_ca_output)
                         result = result + lora_CB(lora_cb_in) * scaling
                     elif self.qpeft_arch == 'A':
-                        lora_QA = self.qpeft_MPO_A[active_adapter]
-                        lora_QB = self.qpeft_MPO_B[active_adapter]
+                        lora_QA = self.lora_qpeft_MPO_A[active_adapter]
+                        lora_QB = self.lora_qpeft_MPO_B[active_adapter]
 
                         lora_qa_output = lora_QA(dropout(x))
                         result = result + lora_QB(lora_qa_output) * scaling
                     elif self.qpeft_arch == 'B':
-                        lora_CA = self.qpeft_MLP_A[active_adapter]
-                        lora_CB = self.qpeft_MLP_B[active_adapter]
-                        lora_CW = self.qpeft_CW[active_adapter]
+                        lora_CA = self.lora_qpeft_MLP_A[active_adapter]
+                        lora_CB = self.lora_qpeft_MLP_B[active_adapter]
+                        # lora_CA = self.lora_A[active_adapter]
+                        # lora_CB = self.lora_B[active_adapter]
+                        lora_CW = self.lora_qpeft_CW[active_adapter]
 
-                        print('lora_CA', lora_CA.weight.requires_grad)
-                        print('lora_CB', lora_CB.weight.requires_grad)
-                        input()
+                        # print('lora_CA', lora_CA.weight.requires_grad)
+                        # print('lora_CB', lora_CB.weight.requires_grad)
+                        # print('lora_CW', lora_CW.weight.requires_grad)
+                        # input()
 
                         lora_ca_output = lora_CA(dropout(x))
                         result = result + lora_CB(lora_CW(lora_ca_output)) * scaling
