@@ -99,6 +99,8 @@ class LoraLayer(BaseTunerLayer):
             self.lora_A = nn.ModuleDict({})
             self.lora_B = nn.ModuleDict({})
         else:
+            self.lora_A = nn.ModuleDict({})
+            self.lora_B = nn.ModuleDict({})
             LoraLayer.other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout",
                                       "qpeft_arch", "qpeft_n_qlayers")
             # Quantum architecture
@@ -151,10 +153,10 @@ class LoraLayer(BaseTunerLayer):
                 self.qpeft_MPO_A = nn.ModuleDict({})
                 self.qpeft_MPO_B = nn.ModuleDict({})
             elif qpeft_arch == 'B': # MLP only (LoRA + Linear layer)    
-                LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
-                                            "qpeft_MLP_A", "qpeft_MLP_B", 
-                                            "qpeft_CW", 
-                                            )
+                # LoraLayer.adapter_layer_names = ("lora_embedding_A", "lora_embedding_B",
+                #                             "qpeft_MLP_A", "qpeft_MLP_B", 
+                #                             "qpeft_CW", 
+                #                             )
                 self.qpeft_MLP_A = nn.ModuleDict({})
                 self.qpeft_MLP_B = nn.ModuleDict({})
                 self.qpeft_CW = nn.ModuleDict({})
@@ -283,6 +285,9 @@ class LoraLayer(BaseTunerLayer):
                                         out_modes=self.b_out_modes, 
                                         mat_ranks = mat_ranks)
             
+            self.qpeft_MPO_A[adapter_name].requires_grad_(True)
+            self.qpeft_MPO_B[adapter_name].requires_grad_(True)
+            
             for name, module in self.qpeft_MPO_B[adapter_name].named_parameters():
                 if "mat" in name:
                     nn.init.zeros_(self.qpeft_MPO_B[adapter_name].mat_cores[-1])
@@ -295,6 +300,10 @@ class LoraLayer(BaseTunerLayer):
                 # also there is a CW layer
                 self.qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
 
+                self.qpeft_MLP_A[adapter_name].requires_grad_(True)
+                self.qpeft_MLP_B[adapter_name].requires_grad_(True)
+                self.qpeft_CW[adapter_name].requires_grad_(True)
+
                 # MLP_A, MLP_B and CW layers are kaiming_initialized
                 nn.init.kaiming_uniform_(self.qpeft_MLP_A[adapter_name].weight)
                 nn.init.kaiming_uniform_(self.qpeft_MLP_B[adapter_name].weight)
@@ -305,6 +314,10 @@ class LoraLayer(BaseTunerLayer):
                 self.qpeft_MLP_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
                 self.qpeft_CW[adapter_name] = nn.Linear(r, r, bias=False)
 
+                self.qpeft_MLP_A[adapter_name].requires_grad_(True)
+                self.qpeft_MLP_B[adapter_name].requires_grad_(True)
+                self.qpeft_CW[adapter_name].requires_grad_(True)
+
                 nn.init.kaiming_uniform_(self.qpeft_MLP_A[adapter_name].weight)
                 nn.init.zeros_(self.qpeft_MLP_B[adapter_name].weight)
                 nn.init.kaiming_uniform_(self.qpeft_CW[adapter_name].weight)
@@ -313,8 +326,12 @@ class LoraLayer(BaseTunerLayer):
             # means quantum layer is in QPeft
             from .qpeft_vqc import QLP
             self.qpeft_Q[adapter_name] = QLP(n_qubits=r, n_qlayers=self.n_qlayers)
+            
+            self.qpeft_Q[adapter_name].requires_grad_(True)
             # also there is a linear layer after QLP
             self.qpeft_QW[adapter_name] = nn.Linear(r, r, bias=False)
+            
+            self.qpeft_QW[adapter_name].requires_grad_(True)
             nn.init.kaiming_uniform_(self.qpeft_QW[adapter_name].weight)
 
 
@@ -357,6 +374,9 @@ class LoraLayer(BaseTunerLayer):
             self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=lora_bias)
             self.lora_bias[adapter_name] = lora_bias
         else:
+            self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+            self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=lora_bias)
+            self.lora_bias[adapter_name] = lora_bias
             self._update_layer_qpeft(adapter_name=adapter_name, r=r)
 
         if use_rslora:
@@ -973,6 +993,10 @@ class Linear(nn.Module, LoraLayer):
                         lora_CA = self.qpeft_MLP_A[active_adapter]
                         lora_CB = self.qpeft_MLP_B[active_adapter]
                         lora_CW = self.qpeft_CW[active_adapter]
+
+                        print('lora_CA', lora_CA.weight.requires_grad)
+                        print('lora_CB', lora_CB.weight.requires_grad)
+                        input()
 
                         lora_ca_output = lora_CA(dropout(x))
                         result = result + lora_CB(lora_CW(lora_ca_output)) * scaling
