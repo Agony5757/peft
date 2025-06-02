@@ -69,17 +69,18 @@ class VQC(tq.QuantumModule):
         
         for k in range(self.n_qlayers):
             self.encoder(q_device, x)
-            for i in range(self.n_wires):
-                self.params_ry1_dct[str(i + k*self.n_wires)](q_device, wires=i)
                 
             for i in range(self.n_wires - 1, -1, -1):
                 self.params_crx1_dct[str(i + k*self.n_wires)](q_device, wires=[i, (i + 1) % self.n_wires])
-            
+
             for i in range(self.n_wires):
-                self.params_ry2_dct[str(i + k*self.n_wires)](q_device, wires=i)
+                self.params_ry1_dct[str(i + k*self.n_wires)](q_device, wires=i)            
             
             for i in [self.n_wires - 1] + list(range(self.n_wires - 1)):
                 self.params_crx2_dct[str(i + k*self.n_wires)](q_device, wires=[i, (i - 1) % self.n_wires])
+
+            for i in range(self.n_wires):
+                self.params_ry2_dct[str(i + k*self.n_wires)](q_device, wires=i)
 
         return (self.measure(q_device))
     
