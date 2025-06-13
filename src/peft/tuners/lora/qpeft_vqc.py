@@ -103,7 +103,7 @@ class QLP(nn.Module):
  
         q_in = input_features
 
-        quantum_out = self.vqc(q_in)#.to(device)
+        quantum_out = self.vqc(q_in) #.to(device)
         if new_input_features.ndim == 3:
             output = quantum_out.view(bsz,len,fz)
         else:

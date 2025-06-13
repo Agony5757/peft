@@ -255,6 +255,8 @@ class PeftConfigMixin(PushToHubMixin):
 
         path = os.path.join(model_id, subfolder) if subfolder is not None else model_id
 
+        print("Peft path (_get_peft_type): ", path)
+        print("model_id (_get_peft_type): ", model_id)
         if os.path.isfile(os.path.join(path, CONFIG_NAME)):
             config_file = os.path.join(path, CONFIG_NAME)
         else:
